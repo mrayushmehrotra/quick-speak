@@ -22,8 +22,8 @@ CHUNK_SIZE  = 1024    # PCM frames per read
 
 # ── GUI ───────────────────────────────────────────────────────────────────────
 WINDOW_TITLE   = "QuickSpeak"
-WINDOW_WIDTH   = 280
-WINDOW_HEIGHT  = 120
+WINDOW_WIDTH   = 460
+WINDOW_HEIGHT  = 100
 WINDOW_OPACITY = 0.93   # 0.0 = fully transparent · 1.0 = fully opaque
 ALWAYS_ON_TOP  = True   # Float above all other windows
 
