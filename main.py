@@ -186,8 +186,41 @@ def on_result(text: str):
 # Entry point
 # ──────────────────────────────────────────────────────────────────────────────
 
+def _check_system_deps():
+    """Verify that critical system tools are present."""
+    missing = []
+    
+    import os
+    is_wayland = os.environ.get("WAYLAND_DISPLAY")
+    
+    # 1. Clipboard tool
+    if is_wayland:
+        if subprocess.run(["which", "wl-copy"], capture_output=True).returncode != 0:
+            missing.append("wl-copy (Wayland clipboard)")
+    else:
+        if subprocess.run(["which", "xclip"], capture_output=True).returncode != 0 and \
+           subprocess.run(["which", "xsel"], capture_output=True).returncode != 0:
+            missing.append("xclip or xsel (X11 clipboard)")
+            
+    # 2. Xdotool (useful backup)
+    if subprocess.run(["which", "xdotool"], capture_output=True).returncode != 0:
+        missing.append("xdotool")
+        
+    # 3. Notification system
+    if subprocess.run(["which", "notify-send"], capture_output=True).returncode != 0:
+        print("[Main] Warning: notify-send not found. Notifications will be silent.")
+        
+    if missing:
+        print(f"[Main] ⚠️ CRITICAL MISSING TOOLS: {', '.join(missing)}")
+        print("Please install these via your package manager (e.g., sudo apt install ...)")
+        return False
+    return True
+
 def main():
     global gui
+    
+    # Run sanity checks
+    _check_system_deps()
 
     gui = GUI(root, on_start=on_start, on_stop=on_stop)
 

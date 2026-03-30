@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=QuickSpeak
+Comment=Voice-to-Clipboard App
+Exec=./quick-speak
+Icon=utilities-terminal
+Terminal=false
+Type=Application
+Categories=Utility;AudioVideo;

@@ -1,7 +1,17 @@
 # ──────────────────────────────────────────────────────────────────────────────
 # QuickSpeak — Configuration
-# Edit these values to customise the app behaviour.
 # ──────────────────────────────────────────────────────────────────────────────
+import os
+import sys
+
+def get_base_path():
+    """Returns the base application path, handles PyInstaller bundles."""
+    if getattr(sys, 'frozen', False):
+        return sys._MEIPASS
+    return os.path.dirname(os.path.abspath(__file__))
+
+BASE_PATH = get_base_path()
+
 
 # ── Speech Engine ─────────────────────────────────────────────────────────────
 # "google" — uses Google Speech Recognition API (needs internet)
@@ -12,8 +22,8 @@ ENGINE = "google"
 LANGUAGE = "en-US"
 
 # ── Vosk (offline) ────────────────────────────────────────────────────────────
-# Path to the Vosk model directory (relative to project root)
-VOSK_MODEL_PATH = "models/vosk-model"
+# Path to the Vosk model directory (absolute path)
+VOSK_MODEL_PATH = os.path.join(BASE_PATH, "models/vosk-model")
 
 # ── Audio Capture ─────────────────────────────────────────────────────────────
 SAMPLE_RATE = 16000   # Hz  — Vosk requires 16000; Google works fine with it too
