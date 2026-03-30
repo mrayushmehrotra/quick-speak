@@ -56,42 +56,33 @@ def _copy_to_clipboard(text: str) -> bool:
     # 1. Wayland check (wl-copy)
     if os.environ.get("WAYLAND_DISPLAY"):
         try:
-            subprocess.run(["wl-copy"], input=text, text=True, check=True, capture_output=True)
+            subprocess.run(["wl-copy"], input=text, text=True, check=True, capture_output=True, timeout=3)
             return True
-        except (FileNotFoundError, subprocess.CalledProcessError):
+        except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
             pass
 
     # 2. xclip (most common on X11)
     try:
-        subprocess.run(["xclip", "-selection", "clipboard"], input=text, text=True, check=True, capture_output=True)
+        subprocess.run(["xclip", "-selection", "clipboard"], input=text, text=True, check=True, capture_output=True, timeout=3)
         return True
-    except (FileNotFoundError, subprocess.CalledProcessError):
+    except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
         pass
 
     # 3. xsel fallback
     try:
-        subprocess.run(["xsel", "--clipboard", "--input"], input=text, text=True, check=True, capture_output=True)
+        subprocess.run(["xsel", "--clipboard", "--input"], input=text, text=True, check=True, capture_output=True, timeout=3)
         return True
-    except (FileNotFoundError, subprocess.CalledProcessError):
+    except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
         pass
 
     # xdotool last resort
     try:
         subprocess.run(
             ["xdotool", "set_clipboard", text],
-            check=True, capture_output=True, text=True,
+            check=True, capture_output=True, text=True, timeout=3
         )
         return True
-    except (FileNotFoundError, subprocess.CalledProcessError):
-        pass
-
-    # Fallback: use Tk's own clipboard (works without external tools)
-    try:
-        root.clipboard_clear()
-        root.clipboard_append(text)
-        root.update()
-        return True
-    except Exception:
+    except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
         pass
 
     return False
@@ -155,28 +146,40 @@ def on_stop():
 def on_result(text: str):
     """
     Called by Recognizer (from a daemon thread) when transcription is done.
-    Copies text to clipboard, fires notification, updates GUI.
-    Uses root.after() for all GUI interactions to stay thread-safe.
+    Performs clipboard copy in the background thread (to avoid GUI hangs),
+    then updates GUI in the main thread.
     """
-    def _finish():
+    ok = False
+    if text:
+        # Copy to clipboard in this background thread
+        ok = _copy_to_clipboard(text)
+        
+    def _update_gui():
         if text:
-            ok = _copy_to_clipboard(text)
             snippet = text[:40] + ("…" if len(text) > 40 else "")
-
             if ok:
                 print(f"[Main] Copied to clipboard: {text!r}")
                 _notify("QuickSpeak — Copied!", snippet)
                 gui.flash_copied(text)
             else:
-                print("[Main] Clipboard copy failed — no xclip/xsel/xdotool found.")
-                gui.update_status("⚠️ Clipboard tool missing", color="#f59e0b")
-                root.after(2500, gui.set_idle)
+                # We reached here because all external tools failed. 
+                # Last ditch effort: try Tk clipboard in the main thread.
+                try:
+                    root.clipboard_clear()
+                    root.clipboard_append(text)
+                    print(f"[Main] Copied via Tk: {text!r}")
+                    _notify("QuickSpeak — Copied!", snippet)
+                    gui.flash_copied(text)
+                except Exception:
+                    print("[Main] All clipboard methods failed.")
+                    gui.update_status("⚠️ Clipboard failed", color="#f59e0b")
+                    root.after(2500, gui.set_idle)
         else:
             print("[Main] Recognizer returned empty text.")
             gui.update_status("⚠️ Couldn't understand audio", color="#f59e0b")
             root.after(2500, gui.set_idle)
 
-    root.after(0, _finish)
+    root.after(0, _update_gui)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
