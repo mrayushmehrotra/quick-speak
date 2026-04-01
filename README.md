@@ -9,6 +9,12 @@
 
 ---
 
+## 🎬 Demo
+
+<video src="https://raw.githubusercontent.com/mrayushmehrotra/quick-speak/main/demo/quick-speak.mp4" width="600" controls></video>
+
+---
+
 ## ✨ Features
 
 - **💎 Premium Pill UI**: A sleek, borderless, always-on-top floating dialog with rounded corners.
